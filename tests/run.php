@@ -1,8 +1,19 @@
 <?php
 
 define( 'SHIPBRIDGE_TESTING', true );
+
+$GLOBALS['shipbridge_test_options'] = array();
+function get_option( $key, $default = false ) {
+	return array_key_exists( $key, $GLOBALS['shipbridge_test_options'] ) ? $GLOBALS['shipbridge_test_options'][ $key ] : $default;
+}
+function wp_parse_args( $value, $defaults ) {
+	return array_merge( $defaults, is_array( $value ) ? $value : array() );
+}
+
 require dirname( __DIR__ ) . '/includes/class-shipbridge-rate-normalizer.php';
 require dirname( __DIR__ ) . '/includes/class-shipbridge-csv-importer.php';
+require dirname( __DIR__ ) . '/includes/class-shipbridge-rate-repository.php';
+require dirname( __DIR__ ) . '/includes/class-shipbridge-zone-manager.php';
 
 function assert_same( $expected, $actual, $message ) {
 	if ( $expected !== $actual ) {
@@ -36,6 +47,55 @@ $csv = ( new ShipBridge_CSV_Importer( $normalizer ) )->import_file( $temp );
 unlink( $temp );
 assert_same( 2, count( $csv['rates'] ), 'CSV importer reads expected rows.' );
 assert_same( '170.00', $csv['rates']['33002']['price'], 'CSV importer applies duplicate rule.' );
+
+$repository = new ShipBridge_Rate_Repository();
+$zones      = new ShipBridge_Zone_Manager( $repository );
+$settings   = array(
+	'protected_patterns' => "Samples\nTL Price",
+	'legacy_patterns'    => "Broward Zone\nMiami Zone",
+);
+$methods    = array(
+	array( 'id' => 'flat_rate', 'enabled' => 'yes', 'cost' => '95', 'instance_id' => 1, 'title' => 'Flat rate' ),
+	array( 'id' => 'local_pickup', 'enabled' => 'yes', 'cost' => null, 'instance_id' => 2, 'title' => 'Local pickup' ),
+);
+$legacy = $zones->legacy_migration_candidates(
+	array(
+		10 => array(
+			'id'        => 10,
+			'name'      => 'Broward Zone 1',
+			'locations' => array(
+				array( 'type' => 'continent', 'code' => 'NA' ),
+				array( 'type' => 'country', 'code' => 'US' ),
+				array( 'type' => 'postcode', 'code' => '33022' ),
+				array( 'type' => 'postcode', 'code' => '33022' ),
+				array( 'type' => 'postcode', 'code' => '33023' ),
+			),
+			'methods'   => $methods,
+		),
+		11 => array(
+			'id'        => 11,
+			'name'      => 'Unsafe wildcard zone',
+			'locations' => array(
+				array( 'type' => 'country', 'code' => 'US' ),
+				array( 'type' => 'postcode', 'code' => '3302*' ),
+			),
+			'methods'   => $methods,
+		),
+		12 => array(
+			'id'        => 12,
+			'name'      => 'Miami Zone 14',
+			'locations' => array(
+				array( 'type' => 'continent', 'code' => 'NA' ),
+				array( 'type' => 'country', 'code' => 'US' ),
+				array( 'type' => 'postcode', 'code' => '12' ),
+			),
+			'methods'   => $methods,
+		),
+	),
+	array( '33022', '33023' ),
+	$settings
+);
+assert_same( array( 10, 12 ), array_keys( $legacy ), 'Named legacy zones are eligible for explicit migration.' );
 
 echo "ShipBridge tests passed.\n";
 

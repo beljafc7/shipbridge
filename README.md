@@ -4,7 +4,7 @@
 
 ShipBridge is a free WooCommerce plugin for importing ZIP-based shipping rates from CSV or Formidable Forms and safely synchronizing them with WooCommerce Shipping Zones.
 
-[**Download ShipBridge 1.0.0**](https://github.com/beljafc7/shipbridge/releases/latest/download/shipbridge-1.0.0.zip)
+[**Download ShipBridge 1.1.0**](https://github.com/beljafc7/shipbridge/releases/latest/download/shipbridge-1.1.0.zip)
 
 ## Manage shipping rates without editing zones one by one
 
@@ -15,6 +15,8 @@ ShipBridge is a free WooCommerce plugin for importing ZIP-based shipping rates f
 - Keep the highest price when duplicate ZIP codes are found.
 - Preview conflicts and proposed changes before synchronization.
 - Protect special zones, Local Pickup, shipping classes, and unrelated methods.
+- Migrate explicitly approved legacy zones that combine ZIP codes with broader location rules.
+- Use `Zone 95` price-based names and add Local Pickup to newly created zones when configured.
 - Create an internal JSON backup before changing WooCommerce.
 - Export the current rate list whenever needed.
 
@@ -36,7 +38,7 @@ After confirming a current full backup, apply the reviewed rates to WooCommerce.
 
 ### WordPress plugin
 
-[**Download ShipBridge 1.0.0**](https://github.com/beljafc7/shipbridge/releases/latest/download/shipbridge-1.0.0.zip)
+[**Download ShipBridge 1.1.0**](https://github.com/beljafc7/shipbridge/releases/latest/download/shipbridge-1.1.0.zip)
 
 Requirements:
 

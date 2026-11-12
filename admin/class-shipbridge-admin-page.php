@@ -70,6 +70,9 @@ final class ShipBridge_Admin_Page {
 							<label>Price <input class="small-text" type="number" min="1" name="price_field_id" value="<?php echo esc_attr( $settings['price_field_id'] ); ?>"></label>
 							<label>City <input class="small-text" type="number" min="0" name="city_field_id" value="<?php echo esc_attr( $settings['city_field_id'] ); ?>"></label>
 						</td></tr>
+						<tr><th><label for="zone_name_format"><?php esc_html_e( 'Zone names', 'shipbridge' ); ?></label></th><td><select id="zone_name_format" name="zone_name_format"><option value="shipbridge" <?php selected( $settings['zone_name_format'], 'shipbridge' ); ?>>ShipBridge — $95.00</option><option value="price" <?php selected( $settings['zone_name_format'], 'price' ); ?>>Zone 95</option></select></td></tr>
+						<tr><th><?php esc_html_e( 'New zone methods', 'shipbridge' ); ?></th><td><label><input type="checkbox" name="add_local_pickup" value="1" <?php checked( ! empty( $settings['add_local_pickup'] ) ); ?>> <?php esc_html_e( 'Add Local Pickup to newly created zones.', 'shipbridge' ); ?></label><p class="description"><?php esc_html_e( 'Existing Local Pickup methods are always preserved when a zone is adopted or migrated.', 'shipbridge' ); ?></p></td></tr>
+						<tr><th><label for="legacy_patterns"><?php esc_html_e( 'Legacy migration zone names', 'shipbridge' ); ?></label></th><td><textarea id="legacy_patterns" name="legacy_patterns" rows="3" class="large-text"><?php echo esc_textarea( $settings['legacy_patterns'] ); ?></textarea><p class="description"><?php esc_html_e( 'One case-insensitive name fragment per line. Matching zones are eligible only for an explicitly confirmed one-time migration.', 'shipbridge' ); ?></p></td></tr>
 						<tr><th><label for="protected_patterns"><?php esc_html_e( 'Protected zone names', 'shipbridge' ); ?></label></th><td><textarea id="protected_patterns" name="protected_patterns" rows="4" class="large-text"><?php echo esc_textarea( $settings['protected_patterns'] ); ?></textarea><p class="description"><?php esc_html_e( 'One case-insensitive name fragment per line. These zones are never adopted or changed.', 'shipbridge' ); ?></p></td></tr>
 						</tbody></table>
 						<?php submit_button( __( 'Save settings', 'shipbridge' ), 'secondary', 'submit', false ); ?>
@@ -99,7 +102,8 @@ final class ShipBridge_Admin_Page {
 					<?php if ( $preview ) : ?>
 						<p><span class="shipbridge-stat"><?php echo esc_html( $preview['rates'] ); ?></span> <?php esc_html_e( 'ZIP codes', 'shipbridge' ); ?><br><span class="shipbridge-stat"><?php echo esc_html( $preview['groups'] ); ?></span> <?php esc_html_e( 'price groups', 'shipbridge' ); ?></p>
 						<p><?php printf( esc_html__( '%1$d managed zones; %2$d eligible existing zones must be explicitly adopted before sync.', 'shipbridge' ), $preview['managed'], count( $preview['adoptable'] ) ); ?></p>
-						<?php if ( $preview['conflicts'] ) : ?><p><strong><?php esc_html_e( 'Blocked:', 'shipbridge' ); ?></strong> <?php esc_html_e( 'Some imported ZIP codes are in unmanaged zones that are not safe to adopt.', 'shipbridge' ); ?></p><div class="shipbridge-list"><?php foreach ( $preview['conflicts'] as $conflict ) : ?><div><?php echo esc_html( $conflict['name'] . ': ' . implode( ', ', array_slice( $conflict['zips'], 0, 20 ) ) ); ?></div><?php endforeach; ?></div><?php endif; ?>
+						<?php if ( $preview['legacy'] ) : ?><p><strong><?php esc_html_e( 'Legacy migration required:', 'shipbridge' ); ?></strong> <?php printf( esc_html__( '%d overlapping zones contain broader country, state, or continent rules. They can be migrated only with explicit authorization.', 'shipbridge' ), count( $preview['legacy'] ) ); ?></p><div class="shipbridge-list"><?php foreach ( $preview['legacy'] as $legacy_zone ) : ?><div><?php echo esc_html( $legacy_zone['name'] . ': ' . implode( ', ', array_slice( $this->zones->postcodes( $legacy_zone ), 0, 20 ) ) ); ?></div><?php endforeach; ?></div><?php endif; ?>
+						<?php if ( $preview['conflicts'] ) : ?><p><strong><?php esc_html_e( 'Blocked:', 'shipbridge' ); ?></strong> <?php esc_html_e( 'Unmanaged zones contain overlapping ZIP codes or broader location rules that are not authorized for migration.', 'shipbridge' ); ?></p><div class="shipbridge-list"><?php foreach ( $preview['conflicts'] as $conflict ) : ?><div><?php echo esc_html( $conflict['name'] . ( $conflict['zips'] ? ': ' . implode( ', ', array_slice( $conflict['zips'], 0, 20 ) ) : ': broader location rules' ) ); ?></div><?php endforeach; ?></div><?php endif; ?>
 						<?php if ( $preview['protected'] ) : ?><p><strong><?php esc_html_e( 'Protected:', 'shipbridge' ); ?></strong> <?php echo esc_html( implode( ', ', $preview['protected'] ) ); ?></p><?php endif; ?>
 					<?php else : ?><p><?php esc_html_e( 'WooCommerce is not active.', 'shipbridge' ); ?></p><?php endif; ?>
 				</section>
@@ -112,8 +116,9 @@ final class ShipBridge_Admin_Page {
 						<?php wp_nonce_field( 'shipbridge_sync' ); ?>
 						<p><label><input type="checkbox" name="backup_ack" value="1" required> <?php esc_html_e( 'I have a current full backup.', 'shipbridge' ); ?></label></p>
 						<p><label><input type="checkbox" name="adopt" value="1"> <?php esc_html_e( 'Adopt the eligible existing postcode-only zones shown in the preview.', 'shipbridge' ); ?></label></p>
+						<?php if ( ! empty( $preview['legacy'] ) ) : ?><p><label><input type="checkbox" name="migrate_legacy" value="1" required> <?php esc_html_e( 'Migrate the listed legacy zones. Their broader location rules will be replaced with exact ZIP codes, while existing shipping methods are preserved.', 'shipbridge' ); ?></label></p><?php endif; ?>
 						<p><label><?php esc_html_e( 'Type SYNC to confirm:', 'shipbridge' ); ?> <input type="text" name="confirmation" required></label></p>
-						<?php submit_button( __( 'Sync WooCommerce', 'shipbridge' ), 'primary', 'submit', false, empty( $preview['can_sync'] ) ? array( 'disabled' => 'disabled' ) : array() ); ?>
+						<?php submit_button( ! empty( $preview['legacy'] ) ? __( 'Migrate and sync WooCommerce', 'shipbridge' ) : __( 'Sync WooCommerce', 'shipbridge' ), 'primary', 'submit', false, empty( $preview['can_sync'] ) ? array( 'disabled' => 'disabled' ) : array() ); ?>
 					</form>
 				</section>
 
@@ -145,6 +150,9 @@ final class ShipBridge_Admin_Page {
 			'zip_field_id'       => absint( $_POST['zip_field_id'] ),
 			'price_field_id'     => absint( $_POST['price_field_id'] ),
 			'city_field_id'      => absint( $_POST['city_field_id'] ),
+			'zone_name_format'   => isset( $_POST['zone_name_format'] ) && 'price' === $_POST['zone_name_format'] ? 'price' : 'shipbridge',
+			'add_local_pickup'   => empty( $_POST['add_local_pickup'] ) ? 0 : 1,
+			'legacy_patterns'    => sanitize_textarea_field( wp_unslash( $_POST['legacy_patterns'] ) ),
 			'protected_patterns' => sanitize_textarea_field( wp_unslash( $_POST['protected_patterns'] ) ),
 		) );
 		$this->redirect( 'settings_saved' );
@@ -199,7 +207,7 @@ final class ShipBridge_Admin_Page {
 			$this->redirect( 'confirmation_required', 'error' );
 		}
 		try {
-			$result = $this->sync->synchronize( ! empty( $_POST['adopt'] ) );
+			$result = $this->sync->synchronize( ! empty( $_POST['adopt'] ), ! empty( $_POST['migrate_legacy'] ) );
 			$this->redirect( 'sync_complete_' . implode( '_', array_map( 'absint', array( $result['created'], $result['updated'], $result['archived'] ) ) ) );
 		} catch ( RuntimeException $exception ) {
 			$this->redirect( $exception->getMessage(), 'error' );

@@ -32,6 +32,9 @@ final class ShipBridge_Rate_Repository {
 			'zip_field_id'       => 10,
 			'price_field_id'     => 12,
 			'city_field_id'      => 0,
+			'zone_name_format'   => 'shipbridge',
+			'add_local_pickup'   => 0,
+			'legacy_patterns'    => '',
 			'protected_patterns' => "Samples\nTL Price",
 		);
 		$value = get_option( self::OPTION_SETTINGS, array() );

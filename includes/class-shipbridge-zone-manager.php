@@ -4,6 +4,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class ShipBridge_Zone_Manager {
 	const ARCHIVE_ZIP = '00000';
+	const LOCATION_TYPES = array( 'postcode', 'state', 'country', 'continent' );
 
 	/** @var ShipBridge_Rate_Repository */
 	private $repository;
@@ -56,14 +57,7 @@ final class ShipBridge_Zone_Manager {
 	}
 
 	public function is_protected( array $zone, array $settings ) {
-		$patterns = preg_split( '/\r\n|\r|\n/', (string) $settings['protected_patterns'] );
-		foreach ( $patterns as $pattern ) {
-			$pattern = trim( $pattern );
-			if ( '' !== $pattern && false !== stripos( $zone['name'], $pattern ) ) {
-				return true;
-			}
-		}
-		return false;
+		return $this->matches_name_patterns( $zone['name'], isset( $settings['protected_patterns'] ) ? $settings['protected_patterns'] : '' );
 	}
 
 	public function is_postcode_only( array $zone ) {
@@ -76,6 +70,15 @@ final class ShipBridge_Zone_Manager {
 			}
 		}
 		return true;
+	}
+
+	public function has_broad_location_rules( array $zone ) {
+		foreach ( $zone['locations'] as $location ) {
+			if ( 'postcode' !== $location['type'] ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** @return string|null */
@@ -120,14 +123,57 @@ final class ShipBridge_Zone_Manager {
 		return $result;
 	}
 
-	public function update_zone( $zone_id, array $postcodes, $price, $name ) {
+	/**
+	 * Find legacy zones that can be migrated only after explicit approval. These zones may include
+	 * broader WooCommerce location rules, but every postcode must be an exact imported ZIP.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function legacy_migration_candidates( array $all_zones, array $source_zips, array $settings ) {
+		$managed = $this->repository->get_managed_zones();
+		$result  = array();
+		foreach ( $all_zones as $id => $zone ) {
+			if ( isset( $managed[ $id ] ) || $this->is_protected( $zone, $settings ) || $this->is_postcode_only( $zone ) || null === $this->flat_rate_cost( $zone ) ) {
+				continue;
+			}
+
+			$postcodes          = $this->postcodes( $zone );
+			$postcode_locations = 0;
+			$safe_locations     = true;
+			$explicitly_named   = $this->matches_name_patterns( $zone['name'], isset( $settings['legacy_patterns'] ) ? $settings['legacy_patterns'] : '' );
+			foreach ( $zone['locations'] as $location ) {
+				if ( ! in_array( $location['type'], self::LOCATION_TYPES, true ) ) {
+					$safe_locations = false;
+					break;
+				}
+				if ( 'postcode' === $location['type'] ) {
+					++$postcode_locations;
+					if ( ! $explicitly_named && ! preg_match( '/^[0-9]{5}$/', $location['code'] ) ) {
+						$safe_locations = false;
+						break;
+					}
+				}
+			}
+
+			if ( ! $safe_locations || ! $zone['locations'] ) {
+				continue;
+			}
+			if ( ! $explicitly_named && ( 0 === $postcode_locations || ! $postcodes || ! array_intersect( $postcodes, $source_zips ) || array_diff( $postcodes, $source_zips ) ) ) {
+				continue;
+			}
+			$result[ $id ] = $zone;
+		}
+		return $result;
+	}
+
+	public function update_zone( $zone_id, array $postcodes, $price, $name, $replace_all_locations = false ) {
 		$zone = WC_Shipping_Zones::get_zone( (int) $zone_id );
 		if ( ! $zone ) {
 			throw new RuntimeException( 'A managed shipping zone no longer exists.' );
 		}
 
 		$zone->set_zone_name( $name );
-		$zone->clear_locations( array( 'postcode' ) );
+		$zone->clear_locations( $replace_all_locations ? self::LOCATION_TYPES : array( 'postcode' ) );
 		foreach ( $postcodes as $postcode ) {
 			$zone->add_location( $postcode, 'postcode' );
 		}
@@ -136,7 +182,7 @@ final class ShipBridge_Zone_Manager {
 		return $zone->get_id();
 	}
 
-	public function create_zone( array $postcodes, $price, $name ) {
+	public function create_zone( array $postcodes, $price, $name, $add_local_pickup = false ) {
 		$zone = new WC_Shipping_Zone();
 		$zone->set_zone_name( $name );
 		foreach ( $postcodes as $postcode ) {
@@ -148,10 +194,13 @@ final class ShipBridge_Zone_Manager {
 			throw new RuntimeException( 'WooCommerce could not add a flat rate method.' );
 		}
 		$this->set_flat_rate( $zone, $price );
+		if ( $add_local_pickup && ! $zone->add_shipping_method( 'local_pickup' ) ) {
+			throw new RuntimeException( 'WooCommerce could not add a Local Pickup method.' );
+		}
 		return $zone->get_id();
 	}
 
-	public function archive_zone( $zone_id ) {
+	public function archive_zone( $zone_id, $clear_all_locations = false ) {
 		$zone = WC_Shipping_Zones::get_zone( (int) $zone_id );
 		if ( ! $zone ) {
 			return;
@@ -160,7 +209,7 @@ final class ShipBridge_Zone_Manager {
 		if ( 0 !== strpos( $name, 'ARCHIVED - ' ) ) {
 			$zone->set_zone_name( 'ARCHIVED - ' . $name );
 		}
-		$zone->clear_locations( array( 'postcode' ) );
+		$zone->clear_locations( $clear_all_locations ? self::LOCATION_TYPES : array( 'postcode' ) );
 		$zone->add_location( self::ARCHIVE_ZIP, 'postcode' );
 		$zone->save();
 	}
@@ -200,6 +249,17 @@ final class ShipBridge_Zone_Manager {
 		$settings['title'] = isset( $settings['title'] ) && '' !== $settings['title'] ? $settings['title'] : __( 'Flat rate', 'woocommerce' );
 		update_option( $flat_rate->get_instance_option_key(), $settings );
 		WC_Cache_Helper::get_transient_version( 'shipping', true );
+	}
+
+	private function matches_name_patterns( $name, $value ) {
+		$patterns = preg_split( '/\r\n|\r|\n/', (string) $value );
+		foreach ( $patterns as $pattern ) {
+			$pattern = trim( $pattern );
+			if ( '' !== $pattern && false !== stripos( (string) $name, $pattern ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
 

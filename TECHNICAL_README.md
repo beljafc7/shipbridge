@@ -136,11 +136,25 @@ ShipBridge never silently claims an existing zone. An adoption candidate must:
 
 The administrator must explicitly enable adoption during synchronization.
 
+### Legacy zone migration
+
+Legacy migration candidates may contain country, state, or continent rules in addition to exact postcodes. A candidate must:
+
+- contain at least one imported exact five-digit ZIP
+- contain no ZIP outside the imported dataset
+- use only supported WooCommerce location types
+- have an enabled Flat Rate with a numeric cost
+- not match a protected name pattern
+
+Administrators can explicitly scope a planned migration with case-insensitive legacy zone name patterns. A matching zone may contain malformed historical postcode rules because every location is replaced during migration, but it must still use only supported WooCommerce location types and have a numeric Flat Rate.
+
+The administrator must explicitly authorize legacy migration. ShipBridge creates a complete zone snapshot first, replaces all broader location rules with exact ZIP codes, and preserves existing shipping methods.
+
 ### Zone updates
 
 For every price group, ShipBridge reuses a managed or adopted zone when possible. It updates only postcode locations and the Flat Rate cost. Other shipping methods, including Local Pickup, remain in place.
 
-If no eligible zone is available, ShipBridge creates a new zone and Flat Rate method.
+If no eligible zone is available, ShipBridge creates a new zone and Flat Rate method. Administrators can optionally add Local Pickup to every newly created zone and use `Zone {price}` names.
 
 ### Archiving
 
@@ -213,7 +227,7 @@ sh scripts/build-zip.sh
 The package is written to:
 
 ```text
-build/shipbridge-1.0.0.zip
+build/shipbridge-1.1.0.zip
 ```
 
 ## Continuous integration
@@ -229,14 +243,14 @@ The CI workflow runs on pushes and pull requests. It validates:
 
 The release workflow runs for tags matching `v*`.
 
-For version 1.0.0:
+For version 1.1.0:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
-GitHub Actions builds `shipbridge-1.0.0.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
+GitHub Actions builds `shipbridge-1.1.0.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
 
 ## Manual QA
 

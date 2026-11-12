@@ -4,7 +4,7 @@ Tags: woocommerce, shipping, zones, csv, formidable
 Requires at least: 6.4
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,8 @@ Features:
 * Optional Formidable Forms source.
 * Highest-price rule for duplicate ZIP codes.
 * Preview, conflict detection, manual confirmation, and internal JSON backups.
+* Explicit migration of legacy ZIP zones that include broader location rules.
+* Configurable price-based zone names and optional Local Pickup for new zones.
 * Protection patterns for Samples, TL Price, and other special zones.
 * Controlled archive cleanup.
 * Downloadable current-rate CSV.
@@ -33,6 +35,11 @@ Features:
 5. Review the preview on a staging site before synchronizing.
 
 == Changelog ==
+
+= 1.1.0 =
+* Add guarded migration for legacy country, state, and continent shipping zones.
+* Add Zone {price} naming and optional Local Pickup for newly created zones.
+* Preserve existing shipping methods while replacing legacy location rules with exact ZIP codes.
 
 = 1.0.0 =
 * Initial public beta promoted into a modular, GitHub-ready release.
