@@ -299,10 +299,25 @@ final class ShipBridge_Sync_Service {
 	}
 
 	private function zone_name( $price, array $settings ) {
-		if ( isset( $settings['zone_name_format'] ) && 'price' === $settings['zone_name_format'] ) {
-			$value = number_format( (float) $price, 2, '.', '' );
-			return 'Zone ' . rtrim( rtrim( $value, '0' ), '.' );
+		$value  = number_format( (float) $price, 2, '.', '' );
+		$value  = rtrim( rtrim( $value, '0' ), '.' );
+		$format = isset( $settings['zone_name_format'] ) ? $settings['zone_name_format'] : 'shipbridge';
+
+		if ( 'price' === $format ) {
+			return 'Zone ' . $value;
 		}
+
+		if ( 'custom' === $format ) {
+			$template = ! empty( $settings['zone_name_template'] ) ? $settings['zone_name_template'] : 'Zone {price}';
+			return strtr(
+				$template,
+				array(
+					'{price}'           => $value,
+					'{price_formatted}' => '$' . number_format( (float) $price, 2 ),
+				)
+			);
+		}
+
 		return sprintf( 'ShipBridge — $%s', number_format( (float) $price, 2 ) );
 	}
 }

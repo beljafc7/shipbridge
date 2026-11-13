@@ -28,6 +28,7 @@ final class ShipBridge_Plugin {
 					'price_field_id'     => 12,
 					'city_field_id'      => 0,
 					'zone_name_format'   => 'shipbridge',
+					'zone_name_template' => 'Zone {price}',
 					'add_local_pickup'   => 0,
 					'legacy_patterns'    => '',
 					'protected_patterns' => "Samples\nTL Price",

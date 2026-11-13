@@ -20,6 +20,11 @@ final class ShipBridge_Rate_Repository {
 		update_option( self::OPTION_RATE_META, $meta, false );
 	}
 
+	public function clear_rates() {
+		delete_option( self::OPTION_RATES );
+		delete_option( self::OPTION_RATE_META );
+	}
+
 	public function get_rate_meta() {
 		$meta = get_option( self::OPTION_RATE_META, array() );
 		return is_array( $meta ) ? $meta : array();
@@ -33,6 +38,7 @@ final class ShipBridge_Rate_Repository {
 			'price_field_id'     => 12,
 			'city_field_id'      => 0,
 			'zone_name_format'   => 'shipbridge',
+			'zone_name_template' => 'Zone {price}',
 			'add_local_pickup'   => 0,
 			'legacy_patterns'    => '',
 			'protected_patterns' => "Samples\nTL Price",

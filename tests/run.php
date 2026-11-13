@@ -9,11 +9,17 @@ function get_option( $key, $default = false ) {
 function wp_parse_args( $value, $defaults ) {
 	return array_merge( $defaults, is_array( $value ) ? $value : array() );
 }
+function delete_option( $key ) {
+	unset( $GLOBALS['shipbridge_test_options'][ $key ] );
+	return true;
+}
 
 require dirname( __DIR__ ) . '/includes/class-shipbridge-rate-normalizer.php';
 require dirname( __DIR__ ) . '/includes/class-shipbridge-csv-importer.php';
 require dirname( __DIR__ ) . '/includes/class-shipbridge-rate-repository.php';
 require dirname( __DIR__ ) . '/includes/class-shipbridge-zone-manager.php';
+require dirname( __DIR__ ) . '/includes/class-shipbridge-backup-manager.php';
+require dirname( __DIR__ ) . '/includes/class-shipbridge-sync-service.php';
 
 function assert_same( $expected, $actual, $message ) {
 	if ( $expected !== $actual ) {
@@ -52,6 +58,17 @@ assert_same( 3, $csv['total_rows'], 'CSV importer reports the total number of da
 
 $repository = new ShipBridge_Rate_Repository();
 $zones      = new ShipBridge_Zone_Manager( $repository );
+assert_same( 'Zone {price}', $repository->get_settings()['zone_name_template'], 'Custom zone name template has a safe default.' );
+$sync       = new ShipBridge_Sync_Service( $repository, $zones, new ShipBridge_Backup_Manager( $repository ) );
+$zone_name  = new ReflectionMethod( 'ShipBridge_Sync_Service', 'zone_name' );
+$zone_name->setAccessible( true );
+assert_same( 'Delivery 95', $zone_name->invoke( $sync, '95.00', array( 'zone_name_format' => 'custom', 'zone_name_template' => 'Delivery {price}' ) ), 'Custom zone names support a trimmed price token.' );
+assert_same( 'Delivery $95.00', $zone_name->invoke( $sync, '95.00', array( 'zone_name_format' => 'custom', 'zone_name_template' => 'Delivery {price_formatted}' ) ), 'Custom zone names support a formatted price token.' );
+$GLOBALS['shipbridge_test_options'][ ShipBridge_Rate_Repository::OPTION_RATES ] = array( '33001' => array( 'zip' => '33001', 'price' => '95.00' ) );
+$GLOBALS['shipbridge_test_options'][ ShipBridge_Rate_Repository::OPTION_RATE_META ] = array( 'source' => 'csv' );
+$repository->clear_rates();
+assert_same( array(), $repository->get_rates(), 'Clearing an import removes stored rates.' );
+assert_same( array(), $repository->get_rate_meta(), 'Clearing an import removes stored metadata.' );
 $settings   = array(
 	'protected_patterns' => "Samples\nTL Price",
 	'legacy_patterns'    => "Broward Zone\nMiami Zone",

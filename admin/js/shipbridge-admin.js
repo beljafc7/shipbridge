@@ -1,6 +1,39 @@
 ( function () {
 	'use strict';
 
+	var source = document.querySelector( '#source' );
+	var nameFormat = document.querySelector( '#zone_name_format' );
+
+	function updateSourcePanels() {
+		if ( ! source ) {
+			return;
+		}
+
+		document.querySelectorAll( '[data-source-panel]' ).forEach( function ( panel ) {
+			panel.hidden = panel.dataset.sourcePanel !== source.value;
+		} );
+	}
+
+	function updateNameTemplate() {
+		if ( ! nameFormat ) {
+			return;
+		}
+
+		document.querySelectorAll( '[data-zone-template]' ).forEach( function ( field ) {
+			field.hidden = 'custom' !== nameFormat.value;
+		} );
+	}
+
+	if ( source ) {
+		source.addEventListener( 'change', updateSourcePanels );
+		updateSourcePanels();
+	}
+
+	if ( nameFormat ) {
+		nameFormat.addEventListener( 'change', updateNameTemplate );
+		updateNameTemplate();
+	}
+
 	document.querySelectorAll( '.shipbridge-dropzone' ).forEach( function ( dropzone ) {
 		var input = dropzone.querySelector( 'input[type="file"]' );
 		var label = dropzone.querySelector( '.shipbridge-file-name' );
@@ -39,7 +72,12 @@
 			var requiredChecks = Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"][required]' ) );
 			var checksComplete = requiredChecks.every( function ( checkbox ) { return checkbox.checked; } );
 			var textComplete = confirmation.value.trim().toUpperCase() === confirmation.dataset.confirmValue;
-			submit.disabled = unavailable || ! checksComplete || ! textComplete;
+			var isReady = ! unavailable && checksComplete && textComplete;
+			var card = form.closest( '.shipbridge-card' );
+			submit.disabled = ! isReady;
+			if ( card && form.dataset.readyClass ) {
+				card.classList.toggle( form.dataset.readyClass, isReady );
+			}
 		}
 
 		confirmation.addEventListener( 'input', updateButton );
@@ -52,5 +90,13 @@
 			}
 		} );
 		updateButton();
+	} );
+
+	document.querySelectorAll( '.shipbridge-clear-import-form' ).forEach( function ( form ) {
+		form.addEventListener( 'submit', function ( event ) {
+			if ( ! window.confirm( form.dataset.confirmMessage || 'Remove the current import?' ) ) {
+				event.preventDefault();
+			}
+		} );
 	} );
 }() );

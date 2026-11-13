@@ -21,6 +21,10 @@
 	box-sizing: border-box;
 }
 
+.shipbridge-admin [hidden] {
+	display: none !important;
+}
+
 .shipbridge-header,
 .shipbridge-title-row,
 .shipbridge-actions,
@@ -145,8 +149,37 @@
 	line-height: 1.4;
 }
 
-.shipbridge-card--danger {
+.shipbridge-card--sync {
 	border-top: 3px solid var(--sb-red);
+	transition: border-color 160ms ease;
+}
+
+.shipbridge-card--sync.is-ready {
+	border-top-color: var(--sb-green);
+}
+
+.shipbridge-admin .button.shipbridge-button--sync:not(:disabled) {
+	border-color: var(--sb-green);
+	background: var(--sb-green);
+	color: #fff;
+}
+
+.shipbridge-admin .button.shipbridge-button--sync:not(:disabled):hover,
+.shipbridge-admin .button.shipbridge-button--sync:not(:disabled):focus {
+	border-color: #007c20;
+	background: #007c20;
+}
+
+.shipbridge-admin .button.shipbridge-button--delete:not(:disabled) {
+	border-color: var(--sb-red);
+	background: var(--sb-red);
+	color: #fff;
+}
+
+.shipbridge-admin .button.shipbridge-button--delete:not(:disabled):hover,
+.shipbridge-admin .button.shipbridge-button--delete:not(:disabled):focus {
+	border-color: #b32d2e;
+	background: #b32d2e;
 }
 
 .shipbridge-card-heading {
@@ -198,6 +231,49 @@
 .shipbridge-id-grid label {
 	font-size: 12px;
 	font-weight: 600;
+}
+
+.shipbridge-label-with-help {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.shipbridge-tooltip {
+	position: relative;
+	display: inline-flex;
+	color: var(--sb-muted);
+	cursor: help;
+}
+
+.shipbridge-tooltip > .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+}
+
+.shipbridge-tooltip-content {
+	position: absolute;
+	z-index: 20;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	display: none;
+	width: 240px;
+	padding: 9px 11px;
+	border-radius: 4px;
+	background: #1d2327;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 400;
+	line-height: 1.45;
+	transform: translateX(-50%);
+	box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
+}
+
+.shipbridge-tooltip:hover .shipbridge-tooltip-content,
+.shipbridge-tooltip:focus .shipbridge-tooltip-content,
+.shipbridge-tooltip:focus-within .shipbridge-tooltip-content {
+	display: block;
 }
 
 .shipbridge-admin input[type="text"],
@@ -324,6 +400,37 @@
 	margin-bottom: 14px;
 }
 
+.shipbridge-summary-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.shipbridge-summary-actions form {
+	margin: 0;
+}
+
+.shipbridge-icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid var(--sb-border);
+	border-radius: 50%;
+	background: #fff;
+	color: var(--sb-muted);
+	cursor: pointer;
+}
+
+.shipbridge-icon-button:hover,
+.shipbridge-icon-button:focus {
+	border-color: var(--sb-red);
+	color: var(--sb-red);
+	box-shadow: 0 0 0 1px var(--sb-red);
+}
+
 .shipbridge-summary-grid {
 	display: grid;
 	grid-template-columns: repeat(5, 1fr);
@@ -421,6 +528,33 @@
 	gap: 20px;
 	padding: 18px 20px;
 	border-bottom: 1px solid var(--sb-border);
+}
+
+.shipbridge-collapsible > summary {
+	cursor: pointer;
+	list-style: none;
+}
+
+.shipbridge-collapsible > summary::-webkit-details-marker {
+	display: none;
+}
+
+.shipbridge-collapsible-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.shipbridge-collapsible > summary .dashicons {
+	transition: transform 160ms ease;
+}
+
+.shipbridge-collapsible:not([open]) > summary {
+	border-bottom: 0;
+}
+
+.shipbridge-collapsible:not([open]) > summary .dashicons {
+	transform: rotate(-90deg);
 }
 
 .shipbridge-section-heading p {
@@ -526,8 +660,13 @@
 	flex: 1;
 }
 
+.shipbridge-guidance summary > .dashicons:last-child {
+	transform: rotate(-90deg);
+	transition: transform 160ms ease;
+}
+
 .shipbridge-guidance[open] summary > .dashicons:last-child {
-	transform: rotate(180deg);
+	transform: rotate(0);
 }
 
 .shipbridge-guidance-body {
