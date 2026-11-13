@@ -1,0 +1,16 @@
+{
+  "name": "shipbridge",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Local development environment for the ShipBridge WooCommerce plugin.",
+  "scripts": {
+    "dev": "wp-env start --runtime=playground",
+    "dev:docker": "wp-env start",
+    "stop": "wp-env stop",
+    "reset": "wp-env reset",
+    "destroy": "wp-env destroy"
+  },
+  "devDependencies": {
+    "@wordpress/env": "12.1.0"
+  }
+}
