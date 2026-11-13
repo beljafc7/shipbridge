@@ -36,6 +36,7 @@ assert_same( '140.00', $result['rates']['33009']['price'], 'Highest duplicate pr
 assert_same( '33010', $result['rates']['33010']['zip'], 'ZIP+4 becomes a five-digit ZIP.' );
 assert_same( 1, $result['duplicates'], 'Duplicate count is reported.' );
 assert_same( 1, count( $result['rejected'] ), 'Invalid ZIP is rejected.' );
+assert_same( 4, $result['total_rows'], 'Normalizer reports the total number of source rows.' );
 
 $groups = $normalizer->group_by_price( $result['rates'] );
 assert_same( array( '33009' ), $groups['140.00'], 'Rates are grouped by canonical price.' );
@@ -47,6 +48,7 @@ $csv = ( new ShipBridge_CSV_Importer( $normalizer ) )->import_file( $temp );
 unlink( $temp );
 assert_same( 2, count( $csv['rates'] ), 'CSV importer reads expected rows.' );
 assert_same( '170.00', $csv['rates']['33002']['price'], 'CSV importer applies duplicate rule.' );
+assert_same( 3, $csv['total_rows'], 'CSV importer reports the total number of data rows.' );
 
 $repository = new ShipBridge_Rate_Repository();
 $zones      = new ShipBridge_Zone_Manager( $repository );
