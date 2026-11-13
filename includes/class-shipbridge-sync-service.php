@@ -42,17 +42,128 @@ final class ShipBridge_Sync_Service {
 		}
 
 		$active_managed = array_filter( $managed, static function ( $item ) { return empty( $item['archived'] ); } );
+		$plan           = $this->build_preview_plan( $groups, $all, $settings, $active_managed, $adoptable, $legacy, $conflicts );
 		return array(
 			'rates'        => count( $rates ),
 			'groups'       => count( $groups ),
 			'managed'      => count( $active_managed ),
-			'create'       => max( 0, count( $groups ) - count( $active_managed ) - count( $adoptable ) - count( $legacy ) ),
+			'create'       => $plan['counts']['create'],
 			'adoptable'    => $adoptable,
 			'legacy'       => $legacy,
 			'protected'    => $protected,
 			'conflicts'    => $conflicts,
+			'zone_changes' => $plan['zone_changes'],
+			'comparison'   => $plan['comparison'],
+			'status_counts' => $plan['status_counts'],
+			'plan_counts'  => $plan['counts'],
 			'can_sync'     => ! empty( $rates ) && empty( $conflicts ),
 		);
+	}
+
+	/**
+	 * Build the read-only view model used by the preview tables.
+	 *
+	 * This mirrors the same price-first assignment rules used during synchronization,
+	 * but never mutates WooCommerce.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function build_preview_plan( array $groups, array $all, array $settings, array $active_managed, array $adoptable, array $legacy, array $conflicts ) {
+		$available = array();
+		foreach ( $active_managed as $id => $entry ) {
+			if ( isset( $all[ $id ] ) ) {
+				$available[ $id ] = $all[ $id ];
+			}
+		}
+		$available += $adoptable;
+		$available += $legacy;
+
+		$assigned     = array();
+		$zone_changes = array();
+		$counts       = array( 'create' => 0, 'update' => 0, 'adopt' => 0, 'migrate' => 0, 'archive' => 0 );
+
+		foreach ( $groups as $price => $postcodes ) {
+			$zone_id = $this->find_price_match( $available, $assigned, $price );
+			if ( ! $zone_id ) {
+				$zone_id = $this->find_unused( $available, $assigned );
+			}
+
+			$action        = 'create';
+			$current_price = null;
+			$current_name  = '';
+			if ( $zone_id ) {
+				$assigned[ $zone_id ] = true;
+				$current_price         = $this->zones->flat_rate_cost( $available[ $zone_id ] );
+				$current_name          = $available[ $zone_id ]['name'];
+				if ( isset( $active_managed[ $zone_id ] ) ) {
+					$action = 'update';
+				} elseif ( isset( $legacy[ $zone_id ] ) ) {
+					$action = 'migrate';
+				} else {
+					$action = 'adopt';
+				}
+			}
+
+			++$counts[ $action ];
+			$zone_changes[] = array(
+				'action'        => $action,
+				'zone_id'       => $zone_id,
+				'current_name'  => $current_name,
+				'proposed_name' => $this->zone_name( $price, $settings ),
+				'current_price' => $current_price,
+				'price'         => $price,
+				'zip_count'     => count( $postcodes ),
+				'postcodes'     => $postcodes,
+			);
+		}
+
+		foreach ( $available as $id => $zone ) {
+			if ( ! isset( $assigned[ $id ] ) ) {
+				++$counts['archive'];
+			}
+		}
+
+		$comparison    = array();
+		$status_counts = array( 'match' => 0, 'different' => 0, 'missing' => 0, 'review' => 0 );
+		foreach ( $this->repository->get_rates() as $rate ) {
+			$matching = array();
+			$prices   = array();
+			$review   = false;
+			foreach ( $all as $id => $zone ) {
+				if ( ! in_array( $rate['zip'], $this->zones->postcodes( $zone ), true ) ) {
+					continue;
+				}
+				$matching[] = $zone['name'];
+				$cost       = $this->zones->flat_rate_cost( $zone );
+				if ( null !== $cost ) {
+					$prices[] = $cost;
+				}
+				if ( isset( $conflicts[ $id ] ) ) {
+					$review = true;
+				}
+			}
+
+			if ( $review ) {
+				$status = 'review';
+			} elseif ( ! $matching ) {
+				$status = 'missing';
+			} elseif ( in_array( $rate['price'], $prices, true ) ) {
+				$status = 'match';
+			} else {
+				$status = 'different';
+			}
+
+			++$status_counts[ $status ];
+			$comparison[] = array(
+				'zip'            => $rate['zip'],
+				'price'          => $rate['price'],
+				'current_price'  => $prices ? $prices[0] : null,
+				'matching_zones' => $matching,
+				'status'         => $status,
+			);
+		}
+
+		return compact( 'zone_changes', 'comparison', 'status_counts', 'counts' );
 	}
 
 	/** @return array<string,mixed> */
@@ -188,10 +299,25 @@ final class ShipBridge_Sync_Service {
 	}
 
 	private function zone_name( $price, array $settings ) {
-		if ( isset( $settings['zone_name_format'] ) && 'price' === $settings['zone_name_format'] ) {
-			$value = number_format( (float) $price, 2, '.', '' );
-			return 'Zone ' . rtrim( rtrim( $value, '0' ), '.' );
+		$value  = number_format( (float) $price, 2, '.', '' );
+		$value  = rtrim( rtrim( $value, '0' ), '.' );
+		$format = isset( $settings['zone_name_format'] ) ? $settings['zone_name_format'] : 'shipbridge';
+
+		if ( 'price' === $format ) {
+			return 'Zone ' . $value;
 		}
+
+		if ( 'custom' === $format ) {
+			$template = ! empty( $settings['zone_name_template'] ) ? $settings['zone_name_template'] : 'Zone {price}';
+			return strtr(
+				$template,
+				array(
+					'{price}'           => $value,
+					'{price_formatted}' => '$' . number_format( (float) $price, 2 ),
+				)
+			);
+		}
+
 		return sprintf( 'ShipBridge — $%s', number_format( (float) $price, 2 ) );
 	}
 }

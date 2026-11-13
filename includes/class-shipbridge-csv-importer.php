@@ -11,7 +11,7 @@ final class ShipBridge_CSV_Importer {
 	}
 
 	/**
-	 * @return array{rates:array,duplicates:int,rejected:array}
+	 * @return array{rates:array,duplicates:int,rejected:array,total_rows:int}
 	 * @throws RuntimeException When the file cannot be parsed.
 	 */
 	public function import_file( $path ) {

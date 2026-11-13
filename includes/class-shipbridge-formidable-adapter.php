@@ -15,7 +15,7 @@ final class ShipBridge_Formidable_Adapter {
 	}
 
 	/**
-	 * @return array{rates:array,duplicates:int,rejected:array}
+	 * @return array{rates:array,duplicates:int,rejected:array,total_rows:int}
 	 * @throws RuntimeException If Formidable is unavailable or settings are invalid.
 	 */
 	public function import( array $settings ) {

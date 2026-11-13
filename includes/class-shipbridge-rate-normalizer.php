@@ -7,7 +7,7 @@ final class ShipBridge_Rate_Normalizer {
 	 * Normalize rows and keep the highest price for duplicate ZIP codes.
 	 *
 	 * @param array<int,array<string,mixed>> $rows Input rows.
-	 * @return array{rates:array<string,array{zip:string,city:string,price:string}>,duplicates:int,rejected:array<int,array{row:mixed,reason:string}>}
+	 * @return array{rates:array<string,array{zip:string,city:string,price:string}>,duplicates:int,rejected:array<int,array{row:mixed,reason:string}>,total_rows:int}
 	 */
 	public function normalize( array $rows ) {
 		$rates      = array();
@@ -45,7 +45,8 @@ final class ShipBridge_Rate_Normalizer {
 
 		ksort( $rates, SORT_STRING );
 
-		return compact( 'rates', 'duplicates', 'rejected' );
+		$total_rows = count( $rows );
+		return compact( 'rates', 'duplicates', 'rejected', 'total_rows' );
 	}
 
 	/** @return string|null */
