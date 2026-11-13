@@ -206,6 +206,22 @@ All plugin-created options are saved without autoloading.
 
 ## Development
 
+Install the local WordPress development tooling:
+
+```bash
+npm install
+```
+
+Start WordPress Playground with WooCommerce and the current plugin directory mounted directly:
+
+```bash
+npm run dev
+```
+
+The admin dashboard is available at `http://localhost:8888/wp-admin/` with username `admin` and password `password`. Refresh the browser after source changes; rebuilding or reinstalling the ZIP is not required.
+
+Use `npm run stop` to stop the environment. Use `npm run dev:docker` when MySQL-backed parity is required and a Docker runtime is available.
+
 Run the framework-independent tests:
 
 ```bash
@@ -227,7 +243,7 @@ sh scripts/build-zip.sh
 The package is written to:
 
 ```text
-build/shipbridge-1.1.0.zip
+build/shipbridge-1.2.0.zip
 ```
 
 ## Continuous integration
@@ -243,14 +259,14 @@ The CI workflow runs on pushes and pull requests. It validates:
 
 The release workflow runs for tags matching `v*`.
 
-For version 1.1.0:
+For version 1.2.0:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
-GitHub Actions builds `shipbridge-1.1.0.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
+GitHub Actions builds `shipbridge-1.2.0.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
 
 ## Manual QA
 

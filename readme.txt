@@ -4,7 +4,7 @@ Tags: woocommerce, shipping, zones, csv, formidable
 Requires at least: 6.4
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,6 +35,11 @@ Features:
 5. Review the preview on a staging site before synchronizing.
 
 == Changelog ==
+
+= 1.2.0 =
+* Redesign the WordPress admin experience to match the ShipBridge Figma specification.
+* Add proposed zone-change and ZIP-level comparison tables.
+* Add import summaries, conflict guidance, pagination, backup details, and last-sync results.
 
 = 1.1.0 =
 * Add guarded migration for legacy country, state, and continent shipping zones.
