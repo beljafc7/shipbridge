@@ -3,7 +3,8 @@
  * Plugin Name: ShipBridge — Shipping Rate Sync for WooCommerce
  * Description: Imports ZIP-based shipping rates from CSV or Formidable Forms and safely synchronizes WooCommerce shipping zones.
  * Version: 1.2.0
- * Author: ShipBridge Contributors
+ * Author: Beljafc.com
+ * Author URI: https://beljafc.com
  * License: GPL-2.0-or-later
  * Text Domain: shipbridge
  * Requires at least: 6.4
