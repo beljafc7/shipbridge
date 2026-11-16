@@ -243,7 +243,7 @@ sh scripts/build-zip.sh
 The package is written to:
 
 ```text
-build/shipbridge-1.2.0.zip
+build/shipbridge-1.2.1.zip
 ```
 
 ## Continuous integration
@@ -259,14 +259,14 @@ The CI workflow runs on pushes and pull requests. It validates:
 
 The release workflow runs for tags matching `v*`.
 
-For version 1.2.0:
+For version 1.2.1:
 
 ```bash
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.2.1
+git push origin v1.2.1
 ```
 
-GitHub Actions builds `shipbridge-1.2.0.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
+GitHub Actions builds `shipbridge-1.2.1.zip` and attaches it to the generated GitHub Release. The public README download link uses that release asset.
 
 ## Manual QA
 
