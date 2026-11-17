@@ -1,6 +1,6 @@
 <?php
 
-defined( 'ABSPATH' ) || defined( 'SHIPBRIDGE_TESTING' ) || exit;
+defined( 'ABSPATH' ) || exit;
 
 final class ShipBridge_CSV_Importer {
 	/** @var ShipBridge_Rate_Normalizer */
@@ -19,6 +19,7 @@ final class ShipBridge_CSV_Importer {
 			throw new RuntimeException( 'The CSV file is not readable.' );
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Streaming is required to parse CSV files without loading them entirely into memory.
 		$handle = fopen( $path, 'rb' );
 		if ( false === $handle ) {
 			throw new RuntimeException( 'The CSV file could not be opened.' );
@@ -26,6 +27,7 @@ final class ShipBridge_CSV_Importer {
 
 		$first_line = fgets( $handle );
 		if ( false === $first_line ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closes the CSV stream opened above.
 			fclose( $handle );
 			throw new RuntimeException( 'The CSV file is empty.' );
 		}
@@ -34,12 +36,14 @@ final class ShipBridge_CSV_Importer {
 		rewind( $handle );
 		$headers = fgetcsv( $handle, 0, $delimiter );
 		if ( ! is_array( $headers ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closes the CSV stream opened above.
 			fclose( $handle );
 			throw new RuntimeException( 'The CSV header could not be read.' );
 		}
 
 		$map = $this->map_headers( $headers );
 		if ( ! isset( $map['zip'], $map['price'] ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closes the CSV stream opened above.
 			fclose( $handle );
 			throw new RuntimeException( 'The CSV must contain ZIP Code and Price columns.' );
 		}
@@ -55,6 +59,7 @@ final class ShipBridge_CSV_Importer {
 				'price' => isset( $values[ $map['price'] ] ) ? $values[ $map['price'] ] : '',
 			);
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Closes the CSV stream opened above.
 		fclose( $handle );
 
 		return $this->normalizer->normalize( $rows );
