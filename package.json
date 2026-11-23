@@ -1,6 +1,6 @@
 {
   "name": "shipbridge",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "description": "Local development environment for the ShipBridge WooCommerce plugin.",
   "scripts": {

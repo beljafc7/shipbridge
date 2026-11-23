@@ -1,10 +1,10 @@
 === ShipBridge — Shipping Rate Sync for WooCommerce ===
-Contributors: shipbridge
+Contributors: beljafc
 Tags: woocommerce, shipping, zones, csv, formidable
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,6 +35,10 @@ Features:
 5. Review the preview on a staging site before synchronizing.
 
 == Changelog ==
+
+= 1.2.2 =
+* Correct the WordPress.org contributor metadata.
+* Remove the unavailable author URL from the plugin metadata.
 
 = 1.2.1 =
 * Update the plugin author to Beljafc.com.
