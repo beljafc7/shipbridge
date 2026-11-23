@@ -246,7 +246,7 @@ final class ShipBridge_Zone_Manager {
 
 		$settings         = $flat_rate->instance_settings;
 		$settings['cost'] = number_format( (float) $price, 2, '.', '' );
-		$settings['title'] = isset( $settings['title'] ) && '' !== $settings['title'] ? $settings['title'] : __( 'Flat rate', 'woocommerce' );
+		$settings['title'] = isset( $settings['title'] ) && '' !== $settings['title'] ? $settings['title'] : __( 'Flat rate', 'shipbridge' );
 		update_option( $flat_rate->get_instance_option_key(), $settings );
 		WC_Cache_Helper::get_transient_version( 'shipping', true );
 	}

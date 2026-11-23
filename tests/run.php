@@ -1,6 +1,10 @@
 <?php
 
-define( 'SHIPBRIDGE_TESTING', true );
+define( 'ABSPATH', dirname( __DIR__ ) . '/' );
+
+function wp_strip_all_tags( $value ) {
+	return strip_tags( $value );
+}
 
 $GLOBALS['shipbridge_test_options'] = array();
 function get_option( $key, $default = false ) {

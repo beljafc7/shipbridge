@@ -1,6 +1,6 @@
 <?php
 
-defined( 'ABSPATH' ) || defined( 'SHIPBRIDGE_TESTING' ) || exit;
+defined( 'ABSPATH' ) || exit;
 
 final class ShipBridge_Rate_Normalizer {
 	/**
@@ -28,7 +28,7 @@ final class ShipBridge_Rate_Normalizer {
 				continue;
 			}
 
-			$city = isset( $row['city'] ) ? trim( strip_tags( (string) $row['city'] ) ) : '';
+			$city = isset( $row['city'] ) ? trim( wp_strip_all_tags( (string) $row['city'] ) ) : '';
 			if ( isset( $rates[ $zip ] ) ) {
 				++$duplicates;
 				if ( (float) $price <= (float) $rates[ $zip ]['price'] ) {

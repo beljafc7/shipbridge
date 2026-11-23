@@ -60,7 +60,8 @@ final class ShipBridge_Admin_Page {
 		$backups    = $this->repository->get_backups();
 		$last_sync  = $this->repository->get_last_sync();
 		$groups     = ( new ShipBridge_Rate_Normalizer() )->group_by_price( $rates );
-		$page       = isset( $_GET['sb_page'] ) ? max( 1, absint( $_GET['sb_page'] ) ) : 1;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Pagination is a read-only admin view parameter.
+		$page       = isset( $_GET['sb_page'] ) ? max( 1, absint( wp_unslash( $_GET['sb_page'] ) ) ) : 1;
 		$per_page   = 25;
 		$comparison = ! empty( $preview['comparison'] ) ? $preview['comparison'] : array();
 		$total_pages = max( 1, (int) ceil( count( $comparison ) / $per_page ) );
@@ -120,7 +121,17 @@ final class ShipBridge_Admin_Page {
 				<section class="shipbridge-card">
 					<?php $this->card_heading( '3', __( 'Preview', 'shipbridge' ), __( 'Understand the impact before ShipBridge changes WooCommerce.', 'shipbridge' ) ); ?>
 					<div class="shipbridge-metrics"><div><strong><?php echo esc_html( isset( $preview['rates'] ) ? $preview['rates'] : 0 ); ?></strong><span><?php esc_html_e( 'ZIP codes', 'shipbridge' ); ?></span></div><div><strong><?php echo esc_html( isset( $preview['groups'] ) ? $preview['groups'] : 0 ); ?></strong><span><?php esc_html_e( 'Price groups', 'shipbridge' ); ?></span></div><div><strong><?php echo esc_html( isset( $preview['create'] ) ? $preview['create'] : 0 ); ?></strong><span><?php esc_html_e( 'New zones', 'shipbridge' ); ?></span></div><div><strong><?php echo esc_html( ! empty( $preview['conflicts'] ) ? count( $preview['conflicts'] ) : 0 ); ?></strong><span><?php esc_html_e( 'Conflicts', 'shipbridge' ); ?></span></div></div>
-					<div class="shipbridge-preview-status <?php echo ! empty( $preview['can_sync'] ) ? 'is-ready' : 'is-blocked'; ?>"><span class="dashicons <?php echo ! empty( $preview['can_sync'] ) ? 'dashicons-yes-alt' : 'dashicons-warning'; ?>"></span><div><strong><?php echo ! empty( $preview['can_sync'] ) ? esc_html__( 'Ready for review', 'shipbridge' ) : esc_html__( 'Action required', 'shipbridge' ); ?></strong><p><?php printf( esc_html__( '%1$d managed zones, %2$d adoptable zones, and %3$d legacy migration candidates.', 'shipbridge' ), isset( $preview['managed'] ) ? $preview['managed'] : 0, ! empty( $preview['adoptable'] ) ? count( $preview['adoptable'] ) : 0, ! empty( $preview['legacy'] ) ? count( $preview['legacy'] ) : 0 ); ?></p></div></div>
+					<div class="shipbridge-preview-status <?php echo ! empty( $preview['can_sync'] ) ? 'is-ready' : 'is-blocked'; ?>"><span class="dashicons <?php echo ! empty( $preview['can_sync'] ) ? 'dashicons-yes-alt' : 'dashicons-warning'; ?>"></span><div><strong><?php echo ! empty( $preview['can_sync'] ) ? esc_html__( 'Ready for review', 'shipbridge' ) : esc_html__( 'Action required', 'shipbridge' ); ?></strong><p><?php
+					/* translators: 1: managed zone count, 2: adoptable zone count, 3: legacy migration candidate count. */
+					$zone_summary = esc_html__( '%1$d managed zones, %2$d adoptable zones, and %3$d legacy migration candidates.', 'shipbridge' );
+					printf(
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The translated format string is escaped by esc_html__() above.
+						$zone_summary,
+						isset( $preview['managed'] ) ? absint( $preview['managed'] ) : 0,
+						! empty( $preview['adoptable'] ) ? absint( count( $preview['adoptable'] ) ) : 0,
+						! empty( $preview['legacy'] ) ? absint( count( $preview['legacy'] ) ) : 0
+					);
+					?></p></div></div>
 					<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=shipbridge' ) ); ?>"><span class="dashicons dashicons-update"></span><?php esc_html_e( 'Refresh preview', 'shipbridge' ); ?></a>
 				</section>
 			</div>
@@ -145,7 +156,10 @@ final class ShipBridge_Admin_Page {
 
 			<div class="shipbridge-bottom-grid">
 				<section class="shipbridge-card shipbridge-card--sync"><h2><?php esc_html_e( 'Synchronize WooCommerce', 'shipbridge' ); ?></h2><p><?php esc_html_e( 'This changes live shipping zones. ShipBridge creates an internal JSON backup first.', 'shipbridge' ); ?></p><form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="shipbridge-confirm-form" data-ready-class="is-ready" data-confirm-message="<?php esc_attr_e( 'Apply these shipping changes to WooCommerce?', 'shipbridge' ); ?>"><input type="hidden" name="action" value="shipbridge_sync"><?php wp_nonce_field( 'shipbridge_sync' ); ?><label class="shipbridge-check"><input type="checkbox" name="backup_ack" value="1" required><span><?php esc_html_e( 'I have a current full backup.', 'shipbridge' ); ?></span></label><?php if ( ! empty( $preview['adoptable'] ) ) : ?><label class="shipbridge-check"><input type="checkbox" name="adopt" value="1"><span><?php esc_html_e( 'Adopt eligible existing postcode-only zones.', 'shipbridge' ); ?></span></label><?php endif; ?><?php if ( ! empty( $preview['legacy'] ) ) : ?><label class="shipbridge-check"><input type="checkbox" name="migrate_legacy" value="1" required><span><?php esc_html_e( 'Migrate the listed legacy zones and replace their broader rules with exact ZIP codes.', 'shipbridge' ); ?></span></label><?php endif; ?><label class="shipbridge-field"><span><?php esc_html_e( 'Type SYNC to confirm', 'shipbridge' ); ?></span><input type="text" name="confirmation" data-confirm-value="SYNC" required></label><button class="button button-primary shipbridge-button--sync" type="submit" <?php disabled( empty( $preview['can_sync'] ) ); ?>><?php echo ! empty( $preview['legacy'] ) ? esc_html__( 'Migrate and sync WooCommerce', 'shipbridge' ) : esc_html__( 'Sync WooCommerce', 'shipbridge' ); ?></button></form></section>
-				<section class="shipbridge-card"><h2><?php esc_html_e( 'Archived zones cleanup', 'shipbridge' ); ?></h2><p><?php printf( esc_html__( '%d verified ShipBridge archive zones are eligible for deletion.', 'shipbridge' ), count( $candidates ) ); ?></p><form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="shipbridge-confirm-form" data-confirm-message="<?php esc_attr_e( 'Permanently delete only the verified archived zones?', 'shipbridge' ); ?>"><input type="hidden" name="action" value="shipbridge_cleanup"><?php wp_nonce_field( 'shipbridge_cleanup' ); ?><label class="shipbridge-field"><span><?php esc_html_e( 'Type DELETE ARCHIVED', 'shipbridge' ); ?></span><input type="text" name="confirmation" data-confirm-value="DELETE ARCHIVED" required></label><button class="button shipbridge-button--delete" type="submit" <?php disabled( empty( $candidates ) ); ?>><?php esc_html_e( 'Delete verified archives', 'shipbridge' ); ?></button></form></section>
+					<section class="shipbridge-card"><h2><?php esc_html_e( 'Archived zones cleanup', 'shipbridge' ); ?></h2><p><?php
+					/* translators: %d: number of archived ShipBridge zones eligible for deletion. */
+					printf( esc_html__( '%d verified ShipBridge archive zones are eligible for deletion.', 'shipbridge' ), absint( count( $candidates ) ) );
+					?></p><form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="shipbridge-confirm-form" data-confirm-message="<?php esc_attr_e( 'Permanently delete only the verified archived zones?', 'shipbridge' ); ?>"><input type="hidden" name="action" value="shipbridge_cleanup"><?php wp_nonce_field( 'shipbridge_cleanup' ); ?><label class="shipbridge-field"><span><?php esc_html_e( 'Type DELETE ARCHIVED', 'shipbridge' ); ?></span><input type="text" name="confirmation" data-confirm-value="DELETE ARCHIVED" required></label><button class="button shipbridge-button--delete" type="submit" <?php disabled( empty( $candidates ) ); ?>><?php esc_html_e( 'Delete verified archives', 'shipbridge' ); ?></button></form></section>
 				<section class="shipbridge-card"><h2><?php esc_html_e( 'Internal backups', 'shipbridge' ); ?></h2><p><?php esc_html_e( 'Download a JSON snapshot created before ShipBridge changed WooCommerce.', 'shipbridge' ); ?></p><?php if ( ! $backups ) : ?><div class="shipbridge-empty-state"><span class="dashicons dashicons-database"></span><p><?php esc_html_e( 'No internal backups yet.', 'shipbridge' ); ?></p></div><?php else : ?><div class="shipbridge-backup-list"><?php foreach ( array_slice( $backups, 0, 4 ) as $backup ) : ?><a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=shipbridge_download_backup&backup_id=' . rawurlencode( $backup['id'] ) ), 'shipbridge_download_backup' ) ); ?>"><span class="dashicons dashicons-download"></span><span><strong><?php echo esc_html( strtoupper( $backup['reason'] ) ); ?></strong><small><?php echo esc_html( $this->format_date( $backup['created_at'] ) . ' · ' . count( $backup['zones'] ) . ' zones' ); ?></small></span></a><?php endforeach; ?></div><?php endif; ?></section>
 			</div>
 
@@ -186,11 +200,18 @@ final class ShipBridge_Admin_Page {
 			return;
 		}
 		$base = admin_url( 'admin.php?page=shipbridge' );
-		?><nav class="shipbridge-pagination" aria-label="<?php esc_attr_e( 'ZIP comparison pagination', 'shipbridge' ); ?>"><span><?php printf( esc_html__( '%d ZIP codes', 'shipbridge' ), $total_items ); ?></span><div><a class="button" <?php echo $page > 1 ? 'href="' . esc_url( add_query_arg( 'sb_page', $page - 1, $base ) ) . '"' : 'aria-disabled="true"'; ?>><?php esc_html_e( 'Previous', 'shipbridge' ); ?></a><span><?php printf( esc_html__( 'Page %1$d of %2$d', 'shipbridge' ), $page, $total_pages ); ?></span><a class="button" <?php echo $page < $total_pages ? 'href="' . esc_url( add_query_arg( 'sb_page', $page + 1, $base ) ) . '"' : 'aria-disabled="true"'; ?>><?php esc_html_e( 'Next', 'shipbridge' ); ?></a></div></nav><?php
+		?><nav class="shipbridge-pagination" aria-label="<?php esc_attr_e( 'ZIP comparison pagination', 'shipbridge' ); ?>"><span><?php
+		/* translators: %d: total number of ZIP codes. */
+		printf( esc_html__( '%d ZIP codes', 'shipbridge' ), absint( $total_items ) );
+		?></span><div><a class="button" <?php echo $page > 1 ? 'href="' . esc_url( add_query_arg( 'sb_page', $page - 1, $base ) ) . '"' : 'aria-disabled="true"'; ?>><?php esc_html_e( 'Previous', 'shipbridge' ); ?></a><span><?php
+		/* translators: 1: current page number, 2: total number of pages. */
+		printf( esc_html__( 'Page %1$d of %2$d', 'shipbridge' ), absint( $page ), absint( $total_pages ) );
+		?></span><a class="button" <?php echo $page < $total_pages ? 'href="' . esc_url( add_query_arg( 'sb_page', $page + 1, $base ) ) . '"' : 'aria-disabled="true"'; ?>><?php esc_html_e( 'Next', 'shipbridge' ); ?></a></div></nav><?php
 	}
 
 	public function save_settings() {
-		$this->guard( 'shipbridge_save_settings' );
+		$this->authorize();
+		check_admin_referer( 'shipbridge_save_settings' );
 		$allowed_formats = array( 'shipbridge', 'price', 'custom' );
 		$name_format     = isset( $_POST['zone_name_format'] ) ? sanitize_key( wp_unslash( $_POST['zone_name_format'] ) ) : 'shipbridge';
 		$name_format     = in_array( $name_format, $allowed_formats, true ) ? $name_format : 'shipbridge';
@@ -199,32 +220,38 @@ final class ShipBridge_Admin_Page {
 			$name_template = 'Zone {price}';
 		}
 		$this->repository->save_settings( array(
-			'source'             => isset( $_POST['source'] ) && 'formidable' === $_POST['source'] ? 'formidable' : 'csv',
-			'form_id'            => absint( $_POST['form_id'] ),
-			'zip_field_id'       => absint( $_POST['zip_field_id'] ),
-			'price_field_id'     => absint( $_POST['price_field_id'] ),
-			'city_field_id'      => absint( $_POST['city_field_id'] ),
+			'source'             => isset( $_POST['source'] ) && 'formidable' === sanitize_key( wp_unslash( $_POST['source'] ) ) ? 'formidable' : 'csv',
+			'form_id'            => isset( $_POST['form_id'] ) ? absint( wp_unslash( $_POST['form_id'] ) ) : 0,
+			'zip_field_id'       => isset( $_POST['zip_field_id'] ) ? absint( wp_unslash( $_POST['zip_field_id'] ) ) : 0,
+			'price_field_id'     => isset( $_POST['price_field_id'] ) ? absint( wp_unslash( $_POST['price_field_id'] ) ) : 0,
+			'city_field_id'      => isset( $_POST['city_field_id'] ) ? absint( wp_unslash( $_POST['city_field_id'] ) ) : 0,
 			'zone_name_format'   => $name_format,
 			'zone_name_template' => $name_template,
 			'add_local_pickup'   => empty( $_POST['add_local_pickup'] ) ? 0 : 1,
-			'legacy_patterns'    => sanitize_textarea_field( wp_unslash( $_POST['legacy_patterns'] ) ),
-			'protected_patterns' => sanitize_textarea_field( wp_unslash( $_POST['protected_patterns'] ) ),
+			'legacy_patterns'    => isset( $_POST['legacy_patterns'] ) ? sanitize_textarea_field( wp_unslash( $_POST['legacy_patterns'] ) ) : '',
+			'protected_patterns' => isset( $_POST['protected_patterns'] ) ? sanitize_textarea_field( wp_unslash( $_POST['protected_patterns'] ) ) : '',
 		) );
 		$this->redirect( 'settings_saved' );
 	}
 
 	public function import_csv() {
-		$this->guard( 'shipbridge_import_csv' );
-		if ( empty( $_FILES['rates_csv']['tmp_name'] ) || UPLOAD_ERR_OK !== (int) $_FILES['rates_csv']['error'] ) {
+		$this->authorize();
+		check_admin_referer( 'shipbridge_import_csv' );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Uploaded file fields are validated and sanitized individually below.
+		$file     = isset( $_FILES['rates_csv'] ) && is_array( $_FILES['rates_csv'] ) ? wp_unslash( $_FILES['rates_csv'] ) : array();
+		$tmp_name = isset( $file['tmp_name'] ) ? sanitize_text_field( $file['tmp_name'] ) : '';
+		$name     = isset( $file['name'] ) ? sanitize_file_name( $file['name'] ) : '';
+		$error    = isset( $file['error'] ) ? absint( $file['error'] ) : UPLOAD_ERR_NO_FILE;
+		if ( empty( $tmp_name ) || UPLOAD_ERR_OK !== $error ) {
 			$this->redirect( 'import_failed', 'error' );
 		}
-		$check = wp_check_filetype_and_ext( $_FILES['rates_csv']['tmp_name'], sanitize_file_name( $_FILES['rates_csv']['name'] ), array( 'csv' => 'text/csv' ) );
+		$check = wp_check_filetype_and_ext( $tmp_name, $name, array( 'csv' => 'text/csv' ) );
 		if ( 'csv' !== $check['ext'] ) {
 			$this->redirect( 'invalid_csv', 'error' );
 		}
 		try {
-			$result = ( new ShipBridge_CSV_Importer( new ShipBridge_Rate_Normalizer() ) )->import_file( $_FILES['rates_csv']['tmp_name'] );
-			$this->store_import( $result, 'csv', sanitize_file_name( wp_unslash( $_FILES['rates_csv']['name'] ) ) );
+			$result = ( new ShipBridge_CSV_Importer( new ShipBridge_Rate_Normalizer() ) )->import_file( $tmp_name );
+			$this->store_import( $result, 'csv', $name );
 		} catch ( RuntimeException $exception ) {
 			$this->redirect( $exception->getMessage(), 'error' );
 		}
@@ -232,7 +259,8 @@ final class ShipBridge_Admin_Page {
 	}
 
 	public function import_formidable() {
-		$this->guard( 'shipbridge_import_formidable' );
+		$this->authorize();
+		check_admin_referer( 'shipbridge_import_formidable' );
 		try {
 			$result = ( new ShipBridge_Formidable_Adapter( new ShipBridge_Rate_Normalizer() ) )->import( $this->repository->get_settings() );
 			$this->store_import( $result, 'formidable', 'Formidable Forms' );
@@ -243,13 +271,15 @@ final class ShipBridge_Admin_Page {
 	}
 
 	public function clear_import() {
-		$this->guard( 'shipbridge_clear_import' );
+		$this->authorize();
+		check_admin_referer( 'shipbridge_clear_import' );
 		$this->repository->clear_rates();
 		$this->redirect( __( 'Imported rates cleared.', 'shipbridge' ) );
 	}
 
 	public function export_csv() {
-		$this->guard( 'shipbridge_export_csv', '_wpnonce', false );
+		$this->authorize();
+		check_admin_referer( 'shipbridge_export_csv' );
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename=shipbridge-rates-' . gmdate( 'Y-m-d' ) . '.csv' );
@@ -258,13 +288,14 @@ final class ShipBridge_Admin_Page {
 		foreach ( $this->repository->get_rates() as $rate ) {
 			fputcsv( $out, array( $rate['zip'], $rate['city'], $rate['price'] ) );
 		}
-		fclose( $out );
 		exit;
 	}
 
 	public function run_sync() {
-		$this->guard( 'shipbridge_sync' );
-		if ( empty( $_POST['backup_ack'] ) || 'SYNC' !== strtoupper( trim( sanitize_text_field( wp_unslash( $_POST['confirmation'] ) ) ) ) ) {
+		$this->authorize();
+		check_admin_referer( 'shipbridge_sync' );
+		$confirmation = isset( $_POST['confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['confirmation'] ) ) : '';
+		if ( empty( $_POST['backup_ack'] ) || 'SYNC' !== strtoupper( trim( $confirmation ) ) ) {
 			$this->redirect( 'confirmation_required', 'error' );
 		}
 		try {
@@ -276,15 +307,18 @@ final class ShipBridge_Admin_Page {
 	}
 
 	public function cleanup() {
-		$this->guard( 'shipbridge_cleanup' );
-		if ( 'DELETE ARCHIVED' !== strtoupper( trim( sanitize_text_field( wp_unslash( $_POST['confirmation'] ) ) ) ) ) {
+		$this->authorize();
+		check_admin_referer( 'shipbridge_cleanup' );
+		$confirmation = isset( $_POST['confirmation'] ) ? sanitize_text_field( wp_unslash( $_POST['confirmation'] ) ) : '';
+		if ( 'DELETE ARCHIVED' !== strtoupper( trim( $confirmation ) ) ) {
 			$this->redirect( 'confirmation_required', 'error' );
 		}
 		$this->redirect( 'archives_deleted_' . $this->sync->cleanup_archives() );
 	}
 
 	public function download_backup() {
-		$this->guard( 'shipbridge_download_backup', '_wpnonce', false );
+		$this->authorize();
+		check_admin_referer( 'shipbridge_download_backup' );
 		$id     = isset( $_GET['backup_id'] ) ? sanitize_text_field( wp_unslash( $_GET['backup_id'] ) ) : '';
 		$backup = $this->backups->find( $id );
 		if ( ! $backup ) {
@@ -311,15 +345,6 @@ final class ShipBridge_Admin_Page {
 		) );
 	}
 
-	private function guard( $action, $nonce_field = '_wpnonce', $post = true ) {
-		$this->authorize();
-		$source = $post ? $_POST : $_GET;
-		$nonce  = isset( $source[ $nonce_field ] ) ? sanitize_text_field( wp_unslash( $source[ $nonce_field ] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, $action ) ) {
-			wp_die( esc_html__( 'Security check failed.', 'shipbridge' ) );
-		}
-	}
-
 	private function authorize() {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You do not have permission to manage shipping rates.', 'shipbridge' ) );
@@ -332,10 +357,13 @@ final class ShipBridge_Admin_Page {
 	}
 
 	private function notice() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a read-only admin notice parameter.
 		if ( empty( $_GET['shipbridge_notice'] ) ) {
 			return;
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a read-only admin notice parameter.
 		$type = isset( $_GET['shipbridge_type'] ) && 'error' === $_GET['shipbridge_type'] ? 'error' : 'success';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is a read-only admin notice parameter.
 		echo '<div class="notice notice-' . esc_attr( $type ) . ' is-dismissible"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['shipbridge_notice'] ) ) ) . '</p></div>';
 	}
 }
